@@ -29,6 +29,9 @@ public class FileTransferService extends IntentService {
     public static final String EXTRAS_FILE_PATH = "file_url";
     public static final String EXTRAS_GROUP_OWNER_ADDRESS = "go_host";
     public static final String EXTRAS_GROUP_OWNER_PORT = "go_port";
+    public static final String Extension = "extension";
+    public static final String TYPE = "type";
+
 
 
     public FileTransferService(String name) {
@@ -45,6 +48,8 @@ public class FileTransferService extends IntentService {
         if (intent.getAction().equals(ACTION_SEND_FILE)) {
             String fileUri = intent.getExtras().getString(EXTRAS_FILE_PATH);
             String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
+            String extension = intent.getExtras().getString(Extension);
+            String type=intent.getExtras().getString(TYPE);
             Socket socket = new Socket();
             int port = intent.getExtras().getInt(EXTRAS_GROUP_OWNER_PORT);
             try {
@@ -54,9 +59,15 @@ public class FileTransferService extends IntentService {
                 Log.d(WiFiDirectActivity.TAG, "Client socket - " + socket.isConnected());
                 OutputStream stream = socket.getOutputStream();
                 ContentResolver cr = context.getContentResolver();
+                DataModel dataModel=new DataModel();
+                dataModel.setFileName(extension);
+                dataModel.setType(type);
+
 
                 InputStream is = null;
                 try {
+                    ObjectOutputStream oos = new ObjectOutputStream(stream);
+                    oos.writeObject(dataModel);
                     is = cr.openInputStream(Uri.parse(fileUri));
                 } catch (FileNotFoundException e) {
                     Log.d(WiFiDirectActivity.TAG, e.toString());

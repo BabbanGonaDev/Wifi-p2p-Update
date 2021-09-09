@@ -12,10 +12,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WpsInfo;
@@ -30,11 +32,15 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -42,12 +48,14 @@ import android.widget.Toast;
 
 import com.example.wifi_p2p.Adapter.WifiPeerListAdapter;
 import com.example.wifi_p2p.BroadcastReceiver.WiFiDirectBroadcastReceiver;
+import com.example.wifi_p2p.Model.DataModel;
 import com.example.wifi_p2p.Service.FileTransferService;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
@@ -369,8 +377,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             // Perform Async Task
             new FileServerAsyncTask(WiFiDirectActivity.this).execute();
         } else if (info.groupFormed) {
-//            recyclerView.findViewById(R.id.btn_share).setVisibility(View.VISIBLE);
-//            recyclerView.getAdapter().notifyDataSetChanged();
         }
     }
 
@@ -391,13 +397,9 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.btn_share:
-                mGetContent.launch("*/*");
                 // Allow user to pick an image from Gallery or other
                 // registered apps
-//                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-//                intent.setType("*/*");
-//                intent.addCategory(Intent.CATEGORY_OPENABLE);
-//                startActivityForResult(intent, CHOOSE_FILE_RESULT_CODE);
+                mGetContent.launch("*/*");
                 break;
             default:
                 return super.onOptionsItemSelected(item);
@@ -411,31 +413,127 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 @Override
                 public void onActivityResult(Uri uri) {
                     // Handle the returned Uri
+                    String Extension = "";
+                    String type = "";
+
+                    /*
+                     * Get the file's content URI from the incoming Intent,
+                     * then query the server app to get the file's display name
+                     * and size.
+                     */
+                    Cursor cursor = getContentResolver().query(uri, null, null,null,null);
+
+                    /*
+                     * Get the column indexes of the data in the Cursor,
+                     * move to the first row in the Cursor, get the data,
+                     * and display it.
+                     */
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                    cursor.moveToFirst();
+
+                    Extension = cursor.getString(nameIndex);
+                    type = getContentResolver().getType(uri);
+
+                    // Transfer data using Intent Service
                     Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
                     Intent serviceIntent = new Intent(WiFiDirectActivity.this, FileTransferService.class);
                     serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
                     serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
                     serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_ADDRESS,
                             info.groupOwnerAddress.getHostAddress());
+                    serviceIntent.putExtra(FileTransferService.Extension, Extension);
                     serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
+                    serviceIntent.putExtra(FileTransferService.TYPE, type);
                     startService(serviceIntent);
                 }
             });
 
-    public void showProgressBar(final String title) {
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                mProgressDialog.setMessage(title);
-                mProgressDialog.setIndeterminate(false);
-                mProgressDialog.setMax(100);
-                mProgressDialog.setProgressNumberFormat(null);
-                mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                mProgressDialog.show();
-                //}
-            }
-        });
-    }
+//    public String getFileName(String fileName) {
+//        int len = fileName.length();
+//        int start = len - 1;
+//        char[] temp = fileName.toCharArray();
+//        while (true) {
+//            if (temp[start] == '/') break;
+//            start--;
+//            if (start == -1) break;
+//        }
+//        return fileName.substring(start + 1);
+//    }
+//
+//    public String getPath(Context context, Uri uri) {
+//        final boolean needToCheckUri = Build.VERSION.SDK_INT >= 19;
+//        String selection = null;
+//        String[] selectionArgs = null;
+//        // Uri is different in versions after KITKAT (Android 4.4), we need to
+//        // deal with different Uris.
+//        if (needToCheckUri && DocumentsContract.isDocumentUri(context.getApplicationContext(), uri)) {
+//            if (isExternalStorageDocument(uri)) {
+//                final String docId = DocumentsContract.getDocumentId(uri);
+//                final String[] split = docId.split(":");
+//                return Environment.getExternalStorageDirectory() + "/" + split[1];
+//            } else if (isDownloadsDocument(uri)) {
+//                final String id = DocumentsContract.getDocumentId(uri);
+//                uri = ContentUris.withAppendedId(
+//                        Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+//            } else if (isMediaDocument(uri)) {
+//                final String docId = DocumentsContract.getDocumentId(uri);
+//                final String[] split = docId.split(":");
+//                final String type = split[0];
+//                if ("image".equals(type)) {
+//                    uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+//                } else if ("video".equals(type)) {
+//                    uri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+//                } else if ("audio".equals(type)) {
+//                    uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+//                }
+//                selection = "_id=?";
+//                selectionArgs = new String[]{split[1]};
+//            }
+//        }
+//        if ("content".equalsIgnoreCase(uri.getScheme())) {
+//            String[] projection = {MediaStore.Images.Media.DATA};
+//            Cursor cursor = null;
+//            try {
+//                cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
+//                int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+//                if (cursor.moveToFirst()) {
+//                    return cursor.getString(column_index);
+//                }
+//            } catch (Exception e) {
+//            }
+//        } else if ("file".equalsIgnoreCase(uri.getScheme())) {
+//            return uri.getPath();
+//        }
+//        return null;
+//    }
+//
+//    public static boolean isExternalStorageDocument(Uri uri) {
+//        return "com.android.externalstorage.documents".equals(uri.getAuthority());
+//    }
+//
+//    public static boolean isDownloadsDocument(Uri uri) {
+//        return "com.android.providers.downloads.documents".equals(uri.getAuthority());
+//    }
+//
+//    public static boolean isMediaDocument(Uri uri) {
+//        return "com.android.providers.media.documents".equals(uri.getAuthority());
+//    }
+//
+//    public void showProgressBar(final String title) {
+//        new Handler(Looper.getMainLooper()).post(new Runnable() {
+//            @Override
+//            public void run() {
+//                mProgressDialog.setMessage(title);
+//                mProgressDialog.setIndeterminate(false);
+//                mProgressDialog.setMax(100);
+//                mProgressDialog.setProgressNumberFormat(null);
+//                mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+//                mProgressDialog.show();
+//                //}
+//            }
+//        });
+//    }
 
     public void hideProgress(ProgressDialog mProgressDialog) {
 
@@ -471,6 +569,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
     }
 
+    // Server thread
     public class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
         private Context context;
 
@@ -491,22 +590,30 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
                 Socket client = serverSocket.accept();
                 Log.d(WiFiDirectActivity.TAG, "Server: connection done");
+                InputStream inputstream = client.getInputStream();
+                ObjectInputStream ois = new ObjectInputStream(
+                        inputstream);
+                DataModel dataModel;
+                dataModel = (DataModel) ois.readObject();
 
-                final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS+"/Babbangona"),
-                        "wifip2pshared-" + System.currentTimeMillis()
-                                + ".jpg" );
+
+                final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/BabbanGona"),
+                        dataModel.getFileName());
+
 
                 File dirs = new File(f.getParent());
                 if (!dirs.exists())
                     dirs.mkdirs();
                 f.createNewFile();
 
+
                 Log.d(WiFiDirectActivity.TAG, "server: copying files " + f.toString());
-                InputStream inputstream = client.getInputStream();
+
                 copyFile(inputstream, new FileOutputStream(f));
+                ois.close();
                 serverSocket.close();
                 return f.getAbsolutePath();
-            } catch (IOException e) {
+            } catch (IOException | ClassNotFoundException e) {
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
                 return null;
             }
@@ -530,8 +637,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             }
             out.close();
             inputStream.close();
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             Log.d(WiFiDirectActivity.TAG, e.toString());
             return false;
         }
