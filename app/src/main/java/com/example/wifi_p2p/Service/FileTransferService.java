@@ -1,13 +1,11 @@
 package com.example.wifi_p2p.Service;
 
 import android.app.IntentService;
-import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
@@ -30,6 +28,7 @@ public class FileTransferService extends IntentService {
     public static final String EXTRAS_GROUP_OWNER_ADDRESS = "go_host";
     public static final String EXTRAS_GROUP_OWNER_PORT = "go_port";
     public static final String Extension = "extension";
+    public static final String FileLength = "fileLength";
     public static final String TYPE = "type";
 
 
@@ -50,9 +49,11 @@ public class FileTransferService extends IntentService {
             String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
             String extension = intent.getExtras().getString(Extension);
             String type=intent.getExtras().getString(TYPE);
+            String fileLength = intent.getExtras().getString(FileLength);
             Socket socket = new Socket();
             int port = intent.getExtras().getInt(EXTRAS_GROUP_OWNER_PORT);
             try {
+                Long file_length = Long.parseLong(fileLength);
                 Log.d(WiFiDirectActivity.TAG, "Opening client socket - ");
                 socket.bind(null);
                 socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
@@ -61,6 +62,7 @@ public class FileTransferService extends IntentService {
                 ContentResolver cr = context.getContentResolver();
                 DataModel dataModel=new DataModel();
                 dataModel.setFileName(extension);
+                dataModel.setFileLength(file_length);
                 dataModel.setType(type);
 
 
@@ -72,7 +74,7 @@ public class FileTransferService extends IntentService {
                 } catch (FileNotFoundException e) {
                     Log.d(WiFiDirectActivity.TAG, e.toString());
                 }
-               WiFiDirectActivity.copyFile(is, stream);
+               WiFiDirectActivity.copyFileToSend(is, stream, file_length);
                 Log.d(WiFiDirectActivity.TAG, "Client: Data written");
             } catch (IOException e) {
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
