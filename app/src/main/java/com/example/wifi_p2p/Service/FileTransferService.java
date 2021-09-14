@@ -44,6 +44,7 @@ public class FileTransferService extends IntentService {
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
         Context context = getApplicationContext();
+        Log.d(WiFiDirectActivity.SENDER_TAG, "Handling the intent");
         if (intent.getAction().equals(ACTION_SEND_FILE)) {
             String fileUri = intent.getExtras().getString(EXTRAS_FILE_PATH);
             String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
@@ -64,6 +65,7 @@ public class FileTransferService extends IntentService {
                 dataModel.setFileName(extension);
                 dataModel.setFileLength(file_length);
                 dataModel.setType(type);
+                Log.d(WiFiDirectActivity.SENDER_TAG, "File to be sent has been set to data Model");
 
 
                 InputStream is = null;

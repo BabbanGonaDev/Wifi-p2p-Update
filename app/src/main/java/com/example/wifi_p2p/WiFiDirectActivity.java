@@ -63,6 +63,8 @@ import pl.bclogic.pulsator4droid.library.PulsatorLayout;
 
 public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
     public static final String TAG = "BGWifiDirect";
+    public static final String SENDER_TAG = "Sender";
+    public static final String RECEIVER_TAG = "Receiver";
     private static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     private static final int PERMISSION_REQUEST_CODE = 1;
     protected static final int CHOOSE_FILE_RESULT_CODE = 20;
@@ -77,7 +79,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private TextView tv_header;
     private LinearLayout loadingLayout;
     private PulsatorLayout pulsator;
-    private Button btn_discover, btn_share;
+    private Button btn_discover;
     public static boolean isSender;
     private WifiP2pInfo info;
     private List<WifiP2pDevice> peers;
@@ -158,13 +160,11 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         mProgressDialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_LIGHT);
 
         peers = new ArrayList<>();
-//        info = new WifiP2pInfo();
 
 
         // Initializing views
         tv_header = findViewById(R.id.tv_header);
         btn_discover = findViewById(R.id.btn_discover);
-        btn_share = findViewById(R.id.btn_share);
         recyclerView = findViewById(R.id.recycleView);
         loadingLayout = findViewById(R.id.loadingLayout);
         pulsator = findViewById(R.id.pulsator);
@@ -396,6 +396,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 // Allow user to pick an image from Gallery or other
                 // registered apps
                 mGetContent.launch("*/*");
+                Log.d(SENDER_TAG, "Selected file to send");
                 break;
             default:
                 return super.onOptionsItemSelected(item);
@@ -418,7 +419,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                      * then query the server app to get the file's display name
                      * and size.
                      */
-                    Cursor cursor = getContentResolver().query(uri, null, null,null,null);
+                    Cursor cursor = getContentResolver().query(uri, null, null, null, null);
 
                     /*
                      * Get the column indexes of the data in the Cursor,
@@ -434,7 +435,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     actualFileLength = cursor.getString(sizeIndex);
 
                     // Transfer data using Intent Service
-                    Log.d(WiFiDirectActivity.TAG, "Intent----------- " + uri);
+                    Log.d(SENDER_TAG, "Intent----------- " + uri);
                     Intent serviceIntent = new Intent(WiFiDirectActivity.this, FileTransferService.class);
                     serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
                     serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
@@ -444,6 +445,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
                     serviceIntent.putExtra(FileTransferService.TYPE, type);
                     serviceIntent.putExtra(FileTransferService.FileLength, actualFileLength);
+                    Log.d(SENDER_TAG, "Attempting to start Intent");
                     startService(serviceIntent);
                 }
             });
@@ -513,6 +515,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
         @Override
         protected String doInBackground(Void... voids) {
+            Log.d(RECEIVER_TAG, "Receiving file started");
             try {
                 ServerSocket serverSocket = new ServerSocket(8988);
                 Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
@@ -524,42 +527,48 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 DataModel dataModel;
                 dataModel = (DataModel) ois.readObject();
 
-               String fileName = dataModel.getFileName();
-               Long actualFileLength = dataModel.getFileLength();
+
+                String storage_state = Environment.getExternalStorageState();
+                if (storage_state.equals(Environment.MEDIA_MOUNTED)) {
+                    String fileName = dataModel.getFileName();
+                    Long actualFileLength = dataModel.getFileLength();
+
+                    Log.d(RECEIVER_TAG, "Creating BG folder in internal storage");
+
+                    final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/BabbanGona"),
+                            fileName);
 
 
-                final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/BabbanGona"),
-                        fileName);
+                    File dirs = new File(f.getParent());
+                    if (!dirs.exists())
+                        dirs.mkdirs();
+                    f.createNewFile();
+
+                    Log.d(RECEIVER_TAG, "Folder created in internal storage");
 
 
-                File dirs = new File(f.getParent());
-                if (!dirs.exists())
-                    dirs.mkdirs();
-                f.createNewFile();
+                    Log.d(RECEIVER_TAG, "server: copying received files " + f.toString());
 
+                    copyReceivedFile(inputstream, new FileOutputStream(f), actualFileLength);
+                    ois.close();
+                    serverSocket.close();
 
-                Log.d(WiFiDirectActivity.TAG, "server: copying files " + f.toString());
-
-                copyReceivedFile(inputstream, new FileOutputStream(f), actualFileLength);
-                ois.close();
-                serverSocket.close();
-                return f.getAbsolutePath();
+                    return f.getAbsolutePath();
+                }
             } catch (IOException | ClassNotFoundException e) {
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
-                return null;
             }
-        }
-
-        @Override
-        protected void onProgressUpdate(Void... values) {
-            super.onProgressUpdate(values);
-
+            Log.d(RECEIVER_TAG, "server: Files copied");
+            return null;
         }
 
         @Override
         protected void onPostExecute(String result) {
             if (result != null) {
                 Toast.makeText(WiFiDirectActivity.this, "File Received\n" + result, Toast.LENGTH_LONG).show();
+                Intent intent=new Intent(context, SharedFilesListActivity.class);
+                context.startActivity(intent);
+
             }
         }
     }
