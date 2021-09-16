@@ -44,7 +44,7 @@ public class FileTransferService extends IntentService {
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
         Context context = getApplicationContext();
-        Log.d(WiFiDirectActivity.SENDER_TAG, "Handling the intent");
+        Log.d(WiFiDirectActivity.SENDER_TAG, "Handling the intent in the service");
         if (intent.getAction().equals(ACTION_SEND_FILE)) {
             String fileUri = intent.getExtras().getString(EXTRAS_FILE_PATH);
             String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
@@ -53,12 +53,17 @@ public class FileTransferService extends IntentService {
             String fileLength = intent.getExtras().getString(FileLength);
             Socket socket = new Socket();
             int port = intent.getExtras().getInt(EXTRAS_GROUP_OWNER_PORT);
+
+            Log.d(WiFiDirectActivity.SENDER_TAG, "We've entered into the FileTransferService");
+            Log.d(WiFiDirectActivity.SENDER_TAG, "File path: " + fileUri + "\n Host: " + host + "\n Extension: " + extension);
+            Log.d(WiFiDirectActivity.SENDER_TAG, "Type: " + type + "\n File Length: " + fileLength + "\n Port: " + port);
+
             try {
                 Long file_length = Long.parseLong(fileLength);
-                Log.d(WiFiDirectActivity.TAG, "Opening client socket - ");
+                Log.d(WiFiDirectActivity.SENDER_TAG, "Opening client socket - ");
                 socket.bind(null);
                 socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
-                Log.d(WiFiDirectActivity.TAG, "Client socket - " + socket.isConnected());
+                Log.d(WiFiDirectActivity.SENDER_TAG, "Client socket - " + socket.isConnected());
                 OutputStream stream = socket.getOutputStream();
                 ContentResolver cr = context.getContentResolver();
                 DataModel dataModel=new DataModel();
@@ -74,12 +79,12 @@ public class FileTransferService extends IntentService {
                     oos.writeObject(dataModel);
                     is = cr.openInputStream(Uri.parse(fileUri));
                 } catch (FileNotFoundException e) {
-                    Log.d(WiFiDirectActivity.TAG, e.toString());
+                    Log.d(WiFiDirectActivity.SENDER_TAG, e.toString());
                 }
-               WiFiDirectActivity.copyFileToSend(is, stream, file_length);
-                Log.d(WiFiDirectActivity.TAG, "Client: Data written");
+                WiFiDirectActivity.copyFileToSend(is, stream, file_length);
+                Log.d(WiFiDirectActivity.SENDER_TAG, "Client: Data has been sent");
             } catch (IOException e) {
-                Log.e(WiFiDirectActivity.TAG, e.getMessage());
+                Log.e(WiFiDirectActivity.SENDER_TAG, e.getMessage());
                 e.printStackTrace();
             } finally {
                 if (socket != null) {

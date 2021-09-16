@@ -446,6 +446,9 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     serviceIntent.putExtra(FileTransferService.TYPE, type);
                     serviceIntent.putExtra(FileTransferService.FileLength, actualFileLength);
                     Log.d(SENDER_TAG, "Attempting to start Intent");
+                    Log.d(SENDER_TAG, "File path selected: " + uri.toString() + "\n Host Address: " + info.groupOwnerAddress.getHostAddress());
+                    Log.d(SENDER_TAG, "Extension: " + Extension + "\n File Type: " + type + "\n File length: " + actualFileLength);
+                    Log.d(SENDER_TAG, "Now we start the service");
                     startService(serviceIntent);
                 }
             });
@@ -505,12 +508,11 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
         public FileServerAsyncTask(Context context) {
             this.context = context;
-
         }
 
         @Override
         protected void onPreExecute() {
-            Log.v("copied ", "----> " + "Opening a server socket");
+            Log.d(RECEIVER_TAG, "----> " + "onPreExecute for the FileServerAsyncTask A.K.A the receiver");
         }
 
         @Override
@@ -518,20 +520,21 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             Log.d(RECEIVER_TAG, "Receiving file started");
             try {
                 ServerSocket serverSocket = new ServerSocket(8988);
-                Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
+                Log.d(RECEIVER_TAG, "Server: Socket opened");
                 Socket client = serverSocket.accept();
-                Log.d(WiFiDirectActivity.TAG, "Server: connection done");
+                Log.d(RECEIVER_TAG, "Server: connection done");
                 InputStream inputstream = client.getInputStream();
-                ObjectInputStream ois = new ObjectInputStream(
-                        inputstream);
+                ObjectInputStream ois = new ObjectInputStream(inputstream);
                 DataModel dataModel;
                 dataModel = (DataModel) ois.readObject();
+                Log.d(RECEIVER_TAG, "DataModel has been gotten from readObject");
 
 
                 String storage_state = Environment.getExternalStorageState();
                 if (storage_state.equals(Environment.MEDIA_MOUNTED)) {
                     String fileName = dataModel.getFileName();
                     Long actualFileLength = dataModel.getFileLength();
+                    Log.d(RECEIVER_TAG, "File Name: " + fileName + "\n File Length: " + actualFileLength);
 
                     Log.d(RECEIVER_TAG, "Creating BG folder in internal storage");
 
@@ -541,51 +544,58 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
                     File dirs = new File(f.getParent());
                     if (!dirs.exists())
+                        Log.d(RECEIVER_TAG, "Directory doesn't exist so we are creating the folder");
                         dirs.mkdirs();
                     f.createNewFile();
 
                     Log.d(RECEIVER_TAG, "Folder created in internal storage");
 
 
-                    Log.d(RECEIVER_TAG, "server: copying received files " + f.toString());
+                    Log.d(RECEIVER_TAG, "receiver: copying received files " + f.toString());
 
                     copyReceivedFile(inputstream, new FileOutputStream(f), actualFileLength);
                     ois.close();
                     serverSocket.close();
 
+                    Log.d(RECEIVER_TAG, "receiver: Files copied and socket closed");
+
+                    Log.d(RECEIVER_TAG, "Received Path: " + f.getAbsolutePath());
                     return f.getAbsolutePath();
                 }
             } catch (IOException | ClassNotFoundException e) {
-                Log.e(WiFiDirectActivity.TAG, e.getMessage());
+                Log.e(WiFiDirectActivity.RECEIVER_TAG, e.getMessage());
             }
-            Log.d(RECEIVER_TAG, "server: Files copied");
             return null;
         }
 
         @Override
         protected void onPostExecute(String result) {
             if (result != null) {
-                Toast.makeText(WiFiDirectActivity.this, "File Received\n" + result, Toast.LENGTH_LONG).show();
-                Intent intent=new Intent(context, SharedFilesListActivity.class);
-                context.startActivity(intent);
-
+                Toast.makeText(WiFiDirectActivity.this, "File Received \n" + result, Toast.LENGTH_LONG).show();
+//                Intent intent=new Intent(context, SharedFilesListActivity.class);
+//                context.startActivity(intent);
             }
         }
     }
 
     public void copyReceivedFile(InputStream inputStream, OutputStream out, Long actualFileLength) {
+        Log.d(RECEIVER_TAG, "Inside copyReceivedFile function");
+
         byte buf[] = new byte[1024];
         int len;
         long total = 0;
         int progressPercentage = 0;
+
         try {
+            Log.d(RECEIVER_TAG, "About to begin writing file. receiver");
             while ((len = inputStream.read(buf)) != -1) {
                 try {
                     out.write(buf, 0, len);
+                    Log.d(RECEIVER_TAG, "File write successful. receiver");
                 } catch (Exception e1) {
-                    // TODO Auto-generated catch block
                     e1.printStackTrace();
                 }
+
                 try {
                     total += len;
                     if (actualFileLength > 0) {
@@ -594,7 +604,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     showProgressBar("Receiving File....");
                     mProgressDialog.setProgress(progressPercentage);
                 } catch (Exception e) {
-                    // TODO: handle exception
                     e.printStackTrace();
                     if (mProgressDialog != null) {
                         if (mProgressDialog.isShowing()) {
@@ -602,6 +611,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                         }
                     }
                 }
+
             }
             // dismiss progress after sending
             if (mProgressDialog != null) {
@@ -611,24 +621,30 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             }
             out.close();
             inputStream.close();
+            Log.d(RECEIVER_TAG, "Receiving should be done here, closing out all streams");
+
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static void copyFileToSend(InputStream inputStream, OutputStream out, Long actualFileLength) {
+        Log.d(SENDER_TAG, "Inside copyFileToSend function");
+
         byte buf[] = new byte[1024];
         int len;
         long total = 0;
         int progressPercentage = 0;
         try {
+            Log.d(SENDER_TAG, "About to begin writing file");
             while ((len = inputStream.read(buf)) != -1) {
                 try {
                     out.write(buf, 0, len);
+                    Log.d(SENDER_TAG, "File write successful");
                 } catch (Exception e1) {
-                    // TODO Auto-generated catch block
                     e1.printStackTrace();
                 }
+
                 try {
                     total += len;
                     if (actualFileLength > 0) {
@@ -637,7 +653,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     showProgressBar("Sending File....");
                     mProgressDialog.setProgress(progressPercentage);
                 } catch (Exception e) {
-                    // TODO: handle exception
                     e.printStackTrace();
                     if (mProgressDialog != null) {
                         if (mProgressDialog.isShowing()) {
@@ -646,14 +661,18 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     }
                 }
             }
+
             // dismiss progress after sending
             if (mProgressDialog != null) {
                 if (mProgressDialog.isShowing()) {
                     mProgressDialog.dismiss();
                 }
             }
+
             out.close();
             inputStream.close();
+            Log.d(SENDER_TAG, "Sending should be done here, closing out all streams");
+
         } catch (IOException e) {
             e.printStackTrace();
         }
