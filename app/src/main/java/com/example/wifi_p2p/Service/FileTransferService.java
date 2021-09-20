@@ -91,6 +91,7 @@ public class FileTransferService extends IntentService {
                     if (socket.isConnected()) {
                         try {
                             socket.close();
+                            Log.d(WiFiDirectActivity.SENDER_TAG, "Closed the socket here");
                         } catch (IOException e) {
                             // Give up
                             e.printStackTrace();

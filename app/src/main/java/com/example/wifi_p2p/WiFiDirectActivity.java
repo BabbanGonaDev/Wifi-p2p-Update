@@ -17,6 +17,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WpsInfo;
@@ -43,7 +44,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.wifi_p2p.Adapter.WifiPeerListAdapter;
+import com.example.wifi_p2p.AsyncTask.FileServerAsyncTask;
 import com.example.wifi_p2p.BroadcastReceiver.WiFiDirectBroadcastReceiver;
+import com.example.wifi_p2p.Data.SharedPrefs;
 import com.example.wifi_p2p.Model.DataModel;
 import com.example.wifi_p2p.Service.FileTransferService;
 
@@ -82,7 +85,24 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private Button btn_discover;
     public static boolean isSender;
     private WifiP2pInfo info;
+    private LocationManager lm;
+    public static boolean gps_enabled = false;
     private List<WifiP2pDevice> peers;
+    private SharedPrefs sharedPrefs;
+    private FileServerAsyncTask.AsyncResponse delegate;
+
+
+    // Retrieve String from File Server Async Task
+    FileServerAsyncTask asyncTask = (FileServerAsyncTask) new FileServerAsyncTask(getApplicationContext(), new FileServerAsyncTask.AsyncResponse(){
+
+        @Override
+        public void processFinish(String result){
+            //Here you will receive the result fired from async class
+            //of onPostExecute(result) method.
+            sharedPrefs.setKeyReceivedFileAbsolutePath(result);
+//            finish();
+        }
+    }).execute();
 
 
     @Override
@@ -153,12 +173,13 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        lm = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
         receiver = new WiFiDirectBroadcastReceiver(manager, channel, this);
         mProgressDialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_LIGHT);
-
+        sharedPrefs = new SharedPrefs(getApplicationContext());
         peers = new ArrayList<>();
 
 
@@ -212,10 +233,22 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         btn_discover.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (wifiManager.isWifiEnabled()) {
+
+                try {
+                    gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                } catch (Exception ex) {
+                }
+                if (!wifiManager.isWifiEnabled() && !gps_enabled) {
+                    Toast.makeText(WiFiDirectActivity.this, "Turn On Wi-Fi and Location", Toast.LENGTH_SHORT).show();
+                } else if (!gps_enabled) {
+                    Toast.makeText(WiFiDirectActivity.this, "Turn On Location", Toast.LENGTH_SHORT).show();
+                } else if (!wifiManager.isWifiEnabled()) {
+                    Toast.makeText(WiFiDirectActivity.this, "Turn On Wi-fi", Toast.LENGTH_SHORT).show();
+                } else {
                     loadingLayout.setVisibility(View.VISIBLE);
                     pulsator.start();
                     recyclerView.setVisibility(View.GONE);
+
                     //this time delay for just see animation
                     final Handler handler = new Handler();
                     handler.postDelayed(new Runnable() {
@@ -223,12 +256,10 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                         public void run() {
                             discoverPeers();
                             recyclerView.setVisibility(View.VISIBLE);
+                            loadingLayout.setVisibility(View.GONE);
                         }
                     }, 2000);
-                } else {
-                    Toast.makeText(WiFiDirectActivity.this, "Turn On Wi-fi First", Toast.LENGTH_SHORT).show();
                 }
-
             }
         });
     }
@@ -359,10 +390,10 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
     }
 
+
     // ConnectionInfoListener
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo info) {
-//        String groupOwnerAddress = info.groupOwnerAddress.getHostAddress();
         this.info = info;
 
         tv_header.setText(tv_header.getText() + " [ " + ((info.isGroupOwner == true) ? "RECEIVER"
@@ -371,7 +402,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         if (info.groupFormed && info.isGroupOwner) {
             Toast.makeText(WiFiDirectActivity.this, "This device can only receive files", Toast.LENGTH_LONG).show();
             // Perform Async Task
-            new FileServerAsyncTask(WiFiDirectActivity.this).execute();
+            new FileServerAsyncTask(WiFiDirectActivity.this, delegate).execute();
         } else if (info.groupFormed) {
         }
     }
@@ -502,81 +533,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
     }
 
-    // Server thread
-    public class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
-        private Context context;
 
-        public FileServerAsyncTask(Context context) {
-            this.context = context;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            Log.d(RECEIVER_TAG, "----> " + "onPreExecute for the FileServerAsyncTask A.K.A the receiver");
-        }
-
-        @Override
-        protected String doInBackground(Void... voids) {
-            Log.d(RECEIVER_TAG, "Receiving file started");
-            try {
-                ServerSocket serverSocket = new ServerSocket(8988);
-                Log.d(RECEIVER_TAG, "Server: Socket opened");
-                Socket client = serverSocket.accept();
-                Log.d(RECEIVER_TAG, "Server: connection done");
-                InputStream inputstream = client.getInputStream();
-                ObjectInputStream ois = new ObjectInputStream(inputstream);
-                DataModel dataModel;
-                dataModel = (DataModel) ois.readObject();
-                Log.d(RECEIVER_TAG, "DataModel has been gotten from readObject");
-
-
-                String storage_state = Environment.getExternalStorageState();
-                if (storage_state.equals(Environment.MEDIA_MOUNTED)) {
-                    String fileName = dataModel.getFileName();
-                    Long actualFileLength = dataModel.getFileLength();
-                    Log.d(RECEIVER_TAG, "File Name: " + fileName + "\n File Length: " + actualFileLength);
-
-                    Log.d(RECEIVER_TAG, "Creating BG folder in internal storage");
-
-                    final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/BabbanGona"),
-                            fileName);
-
-
-                    File dirs = new File(f.getParent());
-                    if (!dirs.exists())
-                        Log.d(RECEIVER_TAG, "Directory doesn't exist so we are creating the folder");
-                        dirs.mkdirs();
-                    f.createNewFile();
-
-                    Log.d(RECEIVER_TAG, "Folder created in internal storage");
-
-
-                    Log.d(RECEIVER_TAG, "receiver: copying received files " + f.toString());
-
-                    copyReceivedFile(inputstream, new FileOutputStream(f), actualFileLength);
-                    ois.close();
-                    serverSocket.close();
-
-                    Log.d(RECEIVER_TAG, "receiver: Files copied and socket closed");
-
-                    Log.d(RECEIVER_TAG, "Received Path: " + f.getAbsolutePath());
-                    return f.getAbsolutePath();
-                }
-            } catch (IOException | ClassNotFoundException e) {
-                Log.e(WiFiDirectActivity.RECEIVER_TAG, e.getMessage());
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            if (result != null) {
-                Toast.makeText(WiFiDirectActivity.this, "File Received \n" + result, Toast.LENGTH_LONG).show();
-//                Intent intent=new Intent(context, SharedFilesListActivity.class);
-//                context.startActivity(intent);
-            }
-        }
-    }
 
     public void copyReceivedFile(InputStream inputStream, OutputStream out, Long actualFileLength) {
         Log.d(RECEIVER_TAG, "Inside copyReceivedFile function");
