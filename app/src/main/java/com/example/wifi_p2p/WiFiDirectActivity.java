@@ -90,19 +90,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private List<WifiP2pDevice> peers;
     private SharedPrefs sharedPrefs;
     private FileServerAsyncTask.AsyncResponse delegate;
-
-
-    // Retrieve String from File Server Async Task
-    FileServerAsyncTask asyncTask = (FileServerAsyncTask) new FileServerAsyncTask(getApplicationContext(), new FileServerAsyncTask.AsyncResponse(){
-
-        @Override
-        public void processFinish(String result){
-            //Here you will receive the result fired from async class
-            //of onPostExecute(result) method.
-            sharedPrefs.setKeyReceivedFileAbsolutePath(result);
-//            finish();
-        }
-    }).execute();
+    String receivedUrl;
 
 
     @Override
@@ -190,6 +178,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         loadingLayout = findViewById(R.id.loadingLayout);
         pulsator = findViewById(R.id.pulsator);
 
+
         mAdapter = new WifiPeerListAdapter(getApplicationContext(), peers, new WifiPeerListAdapter.AdapterClickListener() {
             @Override
             public void configConnect() {
@@ -262,6 +251,8 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 }
             }
         });
+
+
     }
 
     /* register the broadcast receiver with the intent values to be matched */
@@ -402,7 +393,16 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         if (info.groupFormed && info.isGroupOwner) {
             Toast.makeText(WiFiDirectActivity.this, "This device can only receive files", Toast.LENGTH_LONG).show();
             // Perform Async Task
-            new FileServerAsyncTask(WiFiDirectActivity.this, delegate).execute();
+            // Retrieve String from File Server Async Task
+            FileServerAsyncTask asyncTask = (FileServerAsyncTask) new FileServerAsyncTask(WiFiDirectActivity.this, new FileServerAsyncTask.AsyncResponse(){
+
+                @Override
+                public void processFinish(String result){
+                    //Here you will receive the result fired from async class
+                    //of onPostExecute(result) method.
+                    Toast.makeText(WiFiDirectActivity.this, "I am inside Wifi Direct Activity" + result, Toast.LENGTH_SHORT).show();
+                }
+            }).execute();
         } else if (info.groupFormed) {
         }
     }
@@ -464,6 +464,8 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     Extension = cursor.getString(nameIndex);
                     type = getContentResolver().getType(uri);
                     actualFileLength = cursor.getString(sizeIndex);
+
+
 
                     // Transfer data using Intent Service
                     Log.d(SENDER_TAG, "Intent----------- " + uri);
@@ -634,5 +636,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             e.printStackTrace();
         }
     }
+
+
 
 }
