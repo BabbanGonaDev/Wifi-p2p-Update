@@ -26,10 +26,8 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
@@ -47,18 +45,13 @@ import com.example.wifi_p2p.Adapter.WifiPeerListAdapter;
 import com.example.wifi_p2p.AsyncTask.FileServerAsyncTask;
 import com.example.wifi_p2p.BroadcastReceiver.WiFiDirectBroadcastReceiver;
 import com.example.wifi_p2p.Data.SharedPrefs;
-import com.example.wifi_p2p.Model.DataModel;
+import com.example.wifi_p2p.Enum.FileType;
 import com.example.wifi_p2p.Service.FileTransferService;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -222,6 +215,8 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         btn_discover.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                //TODO: Check if wifi and GPS are enabled, else display a dialog prompting the user to put them on
 
                 try {
                     gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -390,7 +385,9 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         tv_header.setText(tv_header.getText() + " [ " + ((info.isGroupOwner == true) ? "RECEIVER"
                 : "SENDER") + " ]");
 
+
         if (info.groupFormed && info.isGroupOwner) {
+            //The receiver block
             Toast.makeText(WiFiDirectActivity.this, "This device can only receive files", Toast.LENGTH_LONG).show();
             // Perform Async Task
             // Retrieve String from File Server Async Task
@@ -401,9 +398,34 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     //Here you will receive the result fired from async class
                     //of onPostExecute(result) method.
                     Toast.makeText(WiFiDirectActivity.this, "I am inside Wifi Direct Activity" + result, Toast.LENGTH_SHORT).show();
+                    //TODO: Save result to shared preference. User will received shared preference from Host application
                 }
             }).execute();
+
         } else if (info.groupFormed) {
+            //The sender block
+            // create instance of Shared preference tp receive stored data
+            SharedPrefs sharedPrefs = new SharedPrefs(WiFiDirectActivity.this);
+
+            // Save stored preferences to variables
+            Log.d(SENDER_TAG, "build: Receiving Shared preference 'FILE PATH'");
+            String filePath = sharedPrefs.getKeyReceivedFileAbsolutePath();
+            String getFileType = sharedPrefs.getFileType();
+            Log.d(SENDER_TAG, "build: Shared preference received... Filepath: "+ filePath);
+            Log.d(SENDER_TAG, "build: Shared preference received... FileType: "+ getFileType);
+
+
+            if(getFileType == FileType.TABLE.toString()) {
+                // TODO convert filepath to URI
+                Log.d(SENDER_TAG, "build: Selected File Type is Database");
+                Log.d(SENDER_TAG, "build: Converting File Path: " + filePath + " to Uri");
+               Uri uri= Uri.parse (filePath);
+                Log.d(SENDER_TAG, "build: File Path converted: " + filePath + " to Uri");
+                Log.d(SENDER_TAG, "build: Starting intent Service.");
+                beginTransfer(uri);
+            } else {
+                //Do Nothing.
+            }
         }
     }
 
@@ -441,50 +463,58 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 @Override
                 public void onActivityResult(Uri uri) {
                     // Handle the returned Uri
-                    String Extension = "";
-                    String type = "";
-                    String actualFileLength = "";
-
-                    /*
-                     * Get the file's content URI from the incoming Intent,
-                     * then query the server app to get the file's display name
-                     * and size.
-                     */
-                    Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-
-                    /*
-                     * Get the column indexes of the data in the Cursor,
-                     * move to the first row in the Cursor, get the data,
-                     * and display it.
-                     */
-                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
-                    cursor.moveToFirst();
-
-                    Extension = cursor.getString(nameIndex);
-                    type = getContentResolver().getType(uri);
-                    actualFileLength = cursor.getString(sizeIndex);
-
-
-
-                    // Transfer data using Intent Service
-                    Log.d(SENDER_TAG, "Intent----------- " + uri);
-                    Intent serviceIntent = new Intent(WiFiDirectActivity.this, FileTransferService.class);
-                    serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
-                    serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
-                    serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_ADDRESS,
-                            info.groupOwnerAddress.getHostAddress());
-                    serviceIntent.putExtra(FileTransferService.Extension, Extension);
-                    serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
-                    serviceIntent.putExtra(FileTransferService.TYPE, type);
-                    serviceIntent.putExtra(FileTransferService.FileLength, actualFileLength);
-                    Log.d(SENDER_TAG, "Attempting to start Intent");
-                    Log.d(SENDER_TAG, "File path selected: " + uri.toString() + "\n Host Address: " + info.groupOwnerAddress.getHostAddress());
-                    Log.d(SENDER_TAG, "Extension: " + Extension + "\n File Type: " + type + "\n File length: " + actualFileLength);
-                    Log.d(SENDER_TAG, "Now we start the service");
-                    startService(serviceIntent);
+                    beginTransfer(uri);
                 }
             });
+
+
+    private void beginTransfer(Uri uri){
+        String Extension = "";
+        String type = "";
+        String actualFileLength = "";
+
+        /*
+         * Get the file's content URI from the incoming Intent,
+         * then query the server app to get the file's display name
+         * and size.
+         */
+        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+
+        /*
+         * Get the column indexes of the data in the Cursor,
+         * move to the first row in the Cursor, get the data,
+         * and display it.
+         */
+        int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+        int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+        cursor.moveToFirst();
+
+        Extension = cursor.getString(nameIndex);
+        type = getContentResolver().getType(uri);
+        actualFileLength = cursor.getString(sizeIndex);
+
+
+
+        // Transfer data using Intent Service
+        Log.d(SENDER_TAG, "Intent----------- " + uri);
+        Intent serviceIntent = new Intent(WiFiDirectActivity.this, FileTransferService.class);
+        serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
+        serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH, uri.toString());
+        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_ADDRESS,
+                info.groupOwnerAddress.getHostAddress());
+        serviceIntent.putExtra(FileTransferService.Extension, Extension);
+        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
+        serviceIntent.putExtra(FileTransferService.TYPE, type);
+        serviceIntent.putExtra(FileTransferService.FileLength, actualFileLength);
+        Log.d(SENDER_TAG, "Attempting to start Intent");
+        Log.d(SENDER_TAG, "File path selected: " + uri.toString() + "\n Host Address: " + info.groupOwnerAddress.getHostAddress());
+        Log.d(SENDER_TAG, "Extension: " + Extension + "\n File Type: " + type + "\n File length: " + actualFileLength);
+        Log.d(SENDER_TAG, "Now we start the service");
+        startService(serviceIntent);
+    }
+
+
+
 
     public static void showProgressBar(final String title) {
         new Handler(Looper.getMainLooper()).post(new Runnable() {
@@ -501,19 +531,19 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         });
     }
 
-    public void hideProgress(ProgressDialog mProgressDialog) {
-
-        try {
-            if (mProgressDialog != null) {
-                if (mProgressDialog.isShowing()) {
-                    mProgressDialog.dismiss();
-                }
-            }
-        } catch (Exception e) {
-            // TODO: handle exception
-            e.printStackTrace();
-        }
-    }
+//    public void hideProgress(ProgressDialog mProgressDialog) {
+//
+//        try {
+//            if (mProgressDialog != null) {
+//                if (mProgressDialog.isShowing()) {
+//                    mProgressDialog.dismiss();
+//                }
+//            }
+//        } catch (Exception e) {
+//            // TODO: handle exception
+//            e.printStackTrace();
+//        }
+//    }
 
     // PeerListListener
     @Override
