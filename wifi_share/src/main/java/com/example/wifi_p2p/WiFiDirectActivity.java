@@ -48,6 +48,7 @@ import com.example.wifi_p2p.Data.SharedPrefs;
 import com.example.wifi_p2p.Enum.FileType;
 import com.example.wifi_p2p.Service.FileTransferService;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -56,6 +57,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import pl.bclogic.pulsator4droid.library.PulsatorLayout;
+
+import static androidx.core.content.FileProvider.getUriForFile;
 
 public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
     public static final String TAG = "BGWifiDirect";
@@ -75,12 +78,13 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private TextView tv_header;
     private LinearLayout loadingLayout;
     private PulsatorLayout pulsator;
-    private Button btn_discover;
+    private Button btn_discover, btn_shareFile;
     public static boolean isSender;
     private WifiP2pInfo info;
     private LocationManager lm;
     public static boolean gps_enabled = false;
     private List<WifiP2pDevice> peers;
+    private Context context;
     private SharedPrefs sharedPrefs;
     private FileServerAsyncTask.AsyncResponse delegate;
     String receivedUrl;
@@ -154,6 +158,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         lm = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -162,17 +167,19 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         mProgressDialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_LIGHT);
         sharedPrefs = new SharedPrefs(getApplicationContext());
         peers = new ArrayList<>();
+        context = WiFiDirectActivity.this;
 
 
         // Initializing views
         tv_header = findViewById(R.id.tv_header);
         btn_discover = findViewById(R.id.btn_discover);
-        recyclerView = findViewById(R.id.recycleView);
+        btn_shareFile = findViewById(R.id.btn_shareFile);
+        recyclerView = findViewById(R.id.TestAppRecyclerView);
         loadingLayout = findViewById(R.id.loadingLayout);
         pulsator = findViewById(R.id.pulsator);
 
 
-        mAdapter = new WifiPeerListAdapter(getApplicationContext(), peers, new WifiPeerListAdapter.AdapterClickListener() {
+        mAdapter = new WifiPeerListAdapter(this, peers, new WifiPeerListAdapter.AdapterClickListener() {
             @Override
             public void configConnect() {
                 connect();
@@ -186,6 +193,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 disconnect();
             }
         });
+        Log.d(TAG, "onCreate: " + mAdapter);
         // Connect the adapter with the RecyclerView.
         recyclerView.setAdapter(mAdapter);
         // Give the RecyclerView a default layout manager.
@@ -247,7 +255,14 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             }
         });
 
-
+        // Share button action
+        btn_shareFile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mGetContent.launch("*/*");
+                Log.d(SENDER_TAG, "Selected file to send");
+            }
+        });
     }
 
     /* register the broadcast receiver with the intent values to be matched */
@@ -385,19 +400,19 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         tv_header.setText(tv_header.getText() + " [ " + ((info.isGroupOwner == true) ? "RECEIVER"
                 : "SENDER") + " ]");
 
-
         if (info.groupFormed && info.isGroupOwner) {
             //The receiver block
             Toast.makeText(WiFiDirectActivity.this, "This device can only receive files", Toast.LENGTH_LONG).show();
             // Perform Async Task
-            // Retrieve String from File Server Async Task
-            FileServerAsyncTask asyncTask = (FileServerAsyncTask) new FileServerAsyncTask(WiFiDirectActivity.this, new FileServerAsyncTask.AsyncResponse(){
+            FileServerAsyncTask asyncTask = (FileServerAsyncTask) new FileServerAsyncTask(WiFiDirectActivity.this, new FileServerAsyncTask.AsyncResponse() {
 
                 @Override
-                public void processFinish(String result){
+                public void processFinish(String result) {
                     //Here you will receive the result fired from async class
                     //of onPostExecute(result) method.
-                    Toast.makeText(WiFiDirectActivity.this, "I am inside Wifi Direct Activity" + result, Toast.LENGTH_SHORT).show();
+                    //exit Wifi Direct Activity to Host App
+                    finish();
+//                    Toast.makeText(WiFiDirectActivity.this, "I am inside Wifi Direct Activity" + result, Toast.LENGTH_SHORT).show();
                     //TODO: Save result to shared preference. User will received shared preference from Host application
                 }
             }).execute();
@@ -409,52 +424,26 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
             // Save stored preferences to variables
             Log.d(SENDER_TAG, "build: Receiving Shared preference 'FILE PATH'");
-            String filePath = sharedPrefs.getKeyReceivedFileAbsolutePath();
-            String getFileType = sharedPrefs.getFileType();
-            Log.d(SENDER_TAG, "build: Shared preference received... Filepath: "+ filePath);
-            Log.d(SENDER_TAG, "build: Shared preference received... FileType: "+ getFileType);
+            String receivedContentUri = sharedPrefs.getKeyFilePath();
+            String getFileType = sharedPrefs.getKeyFileType();
+            Log.d(SENDER_TAG, "build: Shared preference received... Content Uri: " + receivedContentUri);
+            Log.d(SENDER_TAG, "build: Shared preference received... FileType: " + getFileType);
 
-
-            if(getFileType == FileType.TABLE.toString()) {
-                // TODO convert filepath to URI
+            if (getFileType.equals(FileType.TABLE.toString())) {
                 Log.d(SENDER_TAG, "build: Selected File Type is Database");
-                Log.d(SENDER_TAG, "build: Converting File Path: " + filePath + " to Uri");
-               Uri uri= Uri.parse (filePath);
-                Log.d(SENDER_TAG, "build: File Path converted: " + filePath + " to Uri");
+                Log.d(SENDER_TAG, "build: Converting File Path: " + receivedContentUri + " to Uri");
+
+
+                // Write received filepath to a File to convert from file Uri to a content Uri
+                Uri contentUri = Uri.parse(receivedContentUri);
+
+                Log.d(SENDER_TAG, "onConnectionInfoAvailable: Received Content Uri of file Path: " + contentUri.toString());
                 Log.d(SENDER_TAG, "build: Starting intent Service.");
-                beginTransfer(uri);
+                beginTransfer(contentUri);
             } else {
                 //Do Nothing.
             }
         }
-    }
-
-    /**
-     * inflates the action bar menu on main activity
-     */
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.my_menu, menu);
-        return true;
-    }
-
-    /**
-     * Method to do an action when menu item button is clicked
-     */
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.btn_share:
-                // Allow user to pick an image from Gallery or other
-                // registered apps
-                mGetContent.launch("*/*");
-                Log.d(SENDER_TAG, "Selected file to send");
-                break;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-        return true;
     }
 
     // Tell device what to do with intent result
@@ -463,12 +452,14 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 @Override
                 public void onActivityResult(Uri uri) {
                     // Handle the returned Uri
-                    beginTransfer(uri);
+                    Toast.makeText(context, uri.toString(), Toast.LENGTH_SHORT).show();
+                    Log.d(SENDER_TAG, "onActivityResult: Uri from selection " + uri.toString());
+//                    beginTransfer(uri);
                 }
             });
 
 
-    private void beginTransfer(Uri uri){
+    private void beginTransfer(Uri uri) {
         String Extension = "";
         String type = "";
         String actualFileLength = "";
@@ -494,7 +485,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         actualFileLength = cursor.getString(sizeIndex);
 
 
-
         // Transfer data using Intent Service
         Log.d(SENDER_TAG, "Intent----------- " + uri);
         Intent serviceIntent = new Intent(WiFiDirectActivity.this, FileTransferService.class);
@@ -514,8 +504,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     }
 
 
-
-
     public static void showProgressBar(final String title) {
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
@@ -530,20 +518,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             }
         });
     }
-
-//    public void hideProgress(ProgressDialog mProgressDialog) {
-//
-//        try {
-//            if (mProgressDialog != null) {
-//                if (mProgressDialog.isShowing()) {
-//                    mProgressDialog.dismiss();
-//                }
-//            }
-//        } catch (Exception e) {
-//            // TODO: handle exception
-//            e.printStackTrace();
-//        }
-//    }
 
     // PeerListListener
     @Override
@@ -564,7 +538,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             Toast.makeText(WiFiDirectActivity.this, "No devices found", Toast.LENGTH_SHORT).show();
         }
     }
-
 
 
     public void copyReceivedFile(InputStream inputStream, OutputStream out, Long actualFileLength) {
@@ -666,7 +639,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             e.printStackTrace();
         }
     }
-
 
 
 }

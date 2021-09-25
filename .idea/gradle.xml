@@ -10,7 +10,8 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/test_app" />
+            <option value="$PROJECT_DIR$/wifi_share" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

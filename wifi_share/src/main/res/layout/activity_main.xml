@@ -10,10 +10,9 @@
         android:id="@+id/btn_discover"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:text="Discover"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_header" />
 
@@ -61,15 +60,16 @@
 
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycleView"
+        android:id="@+id/TestAppRecyclerView"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="490dp"
         android:layout_marginTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btn_discover" />
+        app:layout_constraintTop_toBottomOf="@+id/btn_discover"
+        app:layout_constraintVertical_bias="0.077" />
 
     <TextView
         android:id="@+id/tv_header"
@@ -82,4 +82,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/btn_shareFile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Share File"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/TestAppRecyclerView" />
 </androidx.constraintlayout.widget.ConstraintLayout>
