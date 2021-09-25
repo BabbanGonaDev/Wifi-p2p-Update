@@ -47,16 +47,6 @@ public class WifiPeerListAdapter extends RecyclerView.Adapter<WifiPeerListAdapte
         }else if(holder.tv_statusResponse.getText().toString().equalsIgnoreCase("Connected")){
             holder.btnConnect.setText("Disconnect");
         }
-
-        holder.btnConnect.setOnClickListener(view -> {
-            if(holder.tv_statusResponse.getText().toString().equalsIgnoreCase("Available")){
-                adapterClickListener.configConnect();
-            }
-            else if(holder.tv_statusResponse.getText().toString().equalsIgnoreCase("Connected")){
-                adapterClickListener.configDisconnect();
-            }
-
-        });
     }
 
     @Override
@@ -74,6 +64,16 @@ public class WifiPeerListAdapter extends RecyclerView.Adapter<WifiPeerListAdapte
             tv_nameResponse = itemView.findViewById(R.id.tv_nameResponse);
             tv_statusResponse = itemView.findViewById(R.id.tv_statusResponse);
             btnConnect = itemView.findViewById(R.id.btnConnect);
+
+            btnConnect.setOnClickListener(view -> {
+                if(tv_statusResponse.getText().toString().equalsIgnoreCase("Available")){
+                    adapterClickListener.configConnect();
+                }
+                else if(tv_statusResponse.getText().toString().equalsIgnoreCase("Connected")){
+                    adapterClickListener.configDisconnect();
+                }
+
+            });
         }
     }
 
