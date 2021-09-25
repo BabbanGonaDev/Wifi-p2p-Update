@@ -429,6 +429,8 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             Log.d(SENDER_TAG, "build: Shared preference received... Content Uri: " + receivedContentUri);
             Log.d(SENDER_TAG, "build: Shared preference received... FileType: " + getFileType);
 
+
+            /// LOGIC not working as planned. REVIEW
             if (getFileType.equals(FileType.TABLE.toString())) {
                 Log.d(SENDER_TAG, "build: Selected File Type is Database");
                 Log.d(SENDER_TAG, "build: Converting File Path: " + receivedContentUri + " to Uri");
@@ -452,9 +454,12 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 @Override
                 public void onActivityResult(Uri uri) {
                     // Handle the returned Uri
-                    Toast.makeText(context, uri.toString(), Toast.LENGTH_SHORT).show();
-                    Log.d(SENDER_TAG, "onActivityResult: Uri from selection " + uri.toString());
-//                    beginTransfer(uri);
+                    if (uri == null) {
+                        Log.d(SENDER_TAG, "beginTransfer: uri is null ");
+                    } else {
+                        Log.d(SENDER_TAG, "onActivityResult: Uri from selection " + uri.toString());
+                        beginTransfer(uri);
+                    }
                 }
             });
 
