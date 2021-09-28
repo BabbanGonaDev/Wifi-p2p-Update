@@ -66,7 +66,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     public static final String RECEIVER_TAG = "Receiver";
     private static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     private static final int PERMISSION_REQUEST_CODE = 1;
-    protected static final int CHOOSE_FILE_RESULT_CODE = 20;
     private WifiP2pManager manager;
     private WifiManager wifiManager;
     private WifiP2pManager.Channel channel;
@@ -86,8 +85,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private List<WifiP2pDevice> peers;
     private Context context;
     private SharedPrefs sharedPrefs;
-    private FileServerAsyncTask.AsyncResponse delegate;
-    String receivedUrl;
+
 
 
     @Override
@@ -181,16 +179,16 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
         mAdapter = new WifiPeerListAdapter(this, peers, new WifiPeerListAdapter.AdapterClickListener() {
             @Override
-            public void configConnect() {
-                connect();
+            public void configConnect(WifiP2pDevice wifiP2pDevice) {
+                connect(wifiP2pDevice);
                 if (mProgressDialog != null && mProgressDialog.isShowing()) {
                     mProgressDialog.dismiss();
                 }
             }
 
             @Override
-            public void configDisconnect() {
-                disconnect();
+            public void configDisconnect(WifiP2pDevice wifiP2pDevice) {
+                disconnect(wifiP2pDevice);
             }
         });
         Log.d(TAG, "onCreate: " + mAdapter);
@@ -329,10 +327,9 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
 
     // Initiate connection between devices
-    public void connect() {
-        WifiP2pDevice device = peers.get(0);
+    public void connect(WifiP2pDevice wifiP2pDevice) {
         WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = device.deviceAddress;
+        config.deviceAddress = wifiP2pDevice.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -359,7 +356,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     }
 
     // Disconnect devices
-    private void disconnect() {
+    private void disconnect(WifiP2pDevice wifiP2pDevice) {
         deletePersistentGroups();
         manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
             @Override
@@ -411,8 +408,9 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     //Here you will receive the result fired from async class
                     //of onPostExecute(result) method.
                     //exit Wifi Direct Activity to Host App
-                    finish();
-//                    Toast.makeText(WiFiDirectActivity.this, "I am inside Wifi Direct Activity" + result, Toast.LENGTH_SHORT).show();
+
+                    Toast.makeText(WiFiDirectActivity.this, "I am inside Wifi Direct Activity" + result, Toast.LENGTH_SHORT).show();
+//                    WiFiDirectActivity.this.finish();
                     //TODO: Save result to shared preference. User will received shared preference from Host application
                 }
             }).execute();
@@ -430,7 +428,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             Log.d(SENDER_TAG, "build: Shared preference received... FileType: " + getFileType);
 
 
-            /// LOGIC not working as planned. REVIEW
             if (getFileType.equals(FileType.TABLE.toString())) {
                 Log.d(SENDER_TAG, "build: Selected File Type is Database");
                 Log.d(SENDER_TAG, "build: Converting File Path: " + receivedContentUri + " to Uri");
@@ -442,7 +439,8 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 Log.d(SENDER_TAG, "onConnectionInfoAvailable: Received Content Uri of file Path: " + contentUri.toString());
                 Log.d(SENDER_TAG, "build: Starting intent Service.");
                 beginTransfer(contentUri);
-            } else {
+            } else if(getFileType.equals(FileType.FILE.toString())) {
+                btn_shareFile.setVisibility(View.VISIBLE);
                 //Do Nothing.
             }
         }
@@ -644,6 +642,5 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             e.printStackTrace();
         }
     }
-
 
 }

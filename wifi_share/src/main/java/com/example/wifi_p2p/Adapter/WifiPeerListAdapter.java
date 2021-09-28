@@ -67,10 +67,10 @@ public class WifiPeerListAdapter extends RecyclerView.Adapter<WifiPeerListAdapte
 
             btnConnect.setOnClickListener(view -> {
                 if(tv_statusResponse.getText().toString().equalsIgnoreCase("Available")){
-                    adapterClickListener.configConnect();
+                    adapterClickListener.configConnect(peers.get(getLayoutPosition()));
                 }
                 else if(tv_statusResponse.getText().toString().equalsIgnoreCase("Connected")){
-                    adapterClickListener.configDisconnect();
+                    adapterClickListener.configDisconnect(peers.get(getLayoutPosition()));
                 }
 
             });
@@ -78,8 +78,8 @@ public class WifiPeerListAdapter extends RecyclerView.Adapter<WifiPeerListAdapte
     }
 
     public interface AdapterClickListener{
-        void configConnect();
-        void configDisconnect();
+        void configConnect(WifiP2pDevice wifiP2pDevice);
+        void configDisconnect(WifiP2pDevice wifiP2pDevice);
     }
 
     private String getDeviceStatus(int deviceStatus) {
