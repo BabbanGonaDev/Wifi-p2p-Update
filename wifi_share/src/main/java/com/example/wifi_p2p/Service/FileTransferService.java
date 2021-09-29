@@ -33,6 +33,7 @@ public class FileTransferService extends IntentService {
 
 
 
+
     public FileTransferService(String name) {
         super(name);
     }
@@ -102,4 +103,5 @@ public class FileTransferService extends IntentService {
             }
         }
     }
+
 }

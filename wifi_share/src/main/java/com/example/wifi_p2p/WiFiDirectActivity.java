@@ -3,6 +3,7 @@ package com.example.wifi_p2p;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -13,6 +14,7 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -32,9 +34,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -48,7 +47,6 @@ import com.example.wifi_p2p.Data.SharedPrefs;
 import com.example.wifi_p2p.Enum.FileType;
 import com.example.wifi_p2p.Service.FileTransferService;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -66,6 +64,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     public static final String RECEIVER_TAG = "Receiver";
     private static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     private static final int PERMISSION_REQUEST_CODE = 1;
+    public static final String EXTRA_DATA_PATH = " com.example.wifi_p2p";
     private WifiP2pManager manager;
     private WifiManager wifiManager;
     private WifiP2pManager.Channel channel;
@@ -83,6 +82,10 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private LocationManager lm;
     public static boolean gps_enabled = false;
     private List<WifiP2pDevice> peers;
+    private static final String MESSAGE_TAG = "com.example.wifi_p2p";
+    private AlertDialog.Builder myAlertBuilder;
+
+    private static WiFiDirectActivity activity;
     private Context context;
     private SharedPrefs sharedPrefs;
 
@@ -175,6 +178,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         recyclerView = findViewById(R.id.TestAppRecyclerView);
         loadingLayout = findViewById(R.id.loadingLayout);
         pulsator = findViewById(R.id.pulsator);
+        activity = new WiFiDirectActivity();
 
 
         mAdapter = new WifiPeerListAdapter(this, peers, new WifiPeerListAdapter.AdapterClickListener() {
@@ -188,7 +192,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
             @Override
             public void configDisconnect(WifiP2pDevice wifiP2pDevice) {
-                disconnect(wifiP2pDevice);
+                alertBuilder(wifiP2pDevice);
             }
         });
         Log.d(TAG, "onCreate: " + mAdapter);
@@ -263,6 +267,27 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         });
     }
 
+    private void alertBuilder(WifiP2pDevice wifiP2pDevice) {
+        myAlertBuilder = new AlertDialog.Builder(WiFiDirectActivity.this);
+        myAlertBuilder.setTitle("BG WIFI DIRECT");
+        myAlertBuilder.setMessage("Do another transfer");
+        myAlertBuilder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                return;
+            }
+        });
+        myAlertBuilder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                disconnect(wifiP2pDevice);
+                btn_shareFile.setVisibility(View.GONE);
+                finish();
+            }
+        });
+        myAlertBuilder.show();
+    }
+
     /* register the broadcast receiver with the intent values to be matched */
     @Override
     protected void onResume() {
@@ -302,13 +327,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     // Initiate peer discovery
     public void discoverPeers() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
@@ -333,13 +351,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         config.wps.setup = WpsInfo.PBC;
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
         }
         manager.connect(channel, config, new WifiP2pManager.ActionListener() {
@@ -407,15 +418,15 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 public void processFinish(String result) {
                     //Here you will receive the result fired from async class
                     //of onPostExecute(result) method.
-                    //exit Wifi Direct Activity to Host App
-
-                    Toast.makeText(WiFiDirectActivity.this, "I am inside Wifi Direct Activity" + result, Toast.LENGTH_SHORT).show();
-//                    WiFiDirectActivity.this.finish();
-                    //TODO: Save result to shared preference. User will received shared preference from Host application
+                    Intent filePathIntent = new Intent();
+                    filePathIntent.putExtra(EXTRA_DATA_PATH, result);
+                    setResult(RESULT_OK, filePathIntent);
+                    finish();
                 }
             }).execute();
 
-        } else if (info.groupFormed) {
+        }
+        else if (info.groupFormed) {
             //The sender block
             // create instance of Shared preference tp receive stored data
             SharedPrefs sharedPrefs = new SharedPrefs(WiFiDirectActivity.this);
@@ -441,9 +452,10 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                 beginTransfer(contentUri);
             } else if(getFileType.equals(FileType.FILE.toString())) {
                 btn_shareFile.setVisibility(View.VISIBLE);
-                //Do Nothing.
+
             }
         }
+
     }
 
     // Tell device what to do with intent result
@@ -584,6 +596,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     mProgressDialog.dismiss();
                 }
             }
+
             out.close();
             inputStream.close();
             Log.d(RECEIVER_TAG, "Receiving should be done here, closing out all streams");
@@ -641,6 +654,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         } catch (IOException e) {
             e.printStackTrace();
         }
+        
     }
 
 }
