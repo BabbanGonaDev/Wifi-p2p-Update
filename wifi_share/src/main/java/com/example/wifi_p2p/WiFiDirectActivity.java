@@ -428,7 +428,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
         else if (info.groupFormed) {
             //The sender block
-            // create instance of Shared preference tp receive stored data
+            // create instance of Shared preference to receive stored data
             SharedPrefs sharedPrefs = new SharedPrefs(WiFiDirectActivity.this);
 
             // Save stored preferences to variables
