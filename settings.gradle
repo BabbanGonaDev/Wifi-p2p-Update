@@ -1,2 +1,3 @@
 rootProject.name = "Wifi-p2p"
-include ':app'
+include ':wifi_share'
+include ':test_app'
