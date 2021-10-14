@@ -46,11 +46,11 @@ public class WifiTransfer {
         }
 
         public boolean canTransfer() throws IllegalArgumentException {
-            if (TextUtils.isEmpty(json)) {
-                throw new IllegalArgumentException("json string is not set! Please set json string to use this method.");
-            }
             if (TextUtils.isEmpty(jsonFileName)) {
                 throw new IllegalArgumentException("json file name path is not set! Please set json file name to use this method.");
+            }
+            else if (TextUtils.isEmpty(json)) {
+                throw new IllegalArgumentException("json string is not set! Please set json string to use this method.");
             }
             return true;
         }

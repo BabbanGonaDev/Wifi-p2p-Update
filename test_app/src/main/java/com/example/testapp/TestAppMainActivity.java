@@ -60,7 +60,7 @@ public class TestAppMainActivity extends AppCompatActivity {
                 WifiTransfer shareDb = new WifiTransfer.
                         Builder(FileType.TABLE, TestAppMainActivity.this)
                         .setJsonString(json)
-                                .setJsonFileName("Contact").build();
+                        .setJsonFileName("Contact").build();
             }
         });
 

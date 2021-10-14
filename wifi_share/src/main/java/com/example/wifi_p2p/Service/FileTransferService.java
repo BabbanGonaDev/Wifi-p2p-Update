@@ -55,10 +55,6 @@ public class FileTransferService extends IntentService {
             Socket socket = new Socket();
             int port = intent.getExtras().getInt(EXTRAS_GROUP_OWNER_PORT);
 
-            Log.d(WiFiDirectActivity.SENDER_TAG, "We've entered into the FileTransferService");
-            Log.d(WiFiDirectActivity.SENDER_TAG, "File path: " + fileUri + "\n Host: " + host + "\n Extension: " + extension);
-            Log.d(WiFiDirectActivity.SENDER_TAG, "Type: " + type + "\n File Length: " + fileLength + "\n Port: " + port);
-
             try {
                 Long file_length = Long.parseLong(fileLength);
                 Log.d(WiFiDirectActivity.SENDER_TAG, "Opening client socket - ");
@@ -71,8 +67,6 @@ public class FileTransferService extends IntentService {
                 dataModel.setFileName(extension);
                 dataModel.setFileLength(file_length);
                 dataModel.setType(type);
-                Log.d(WiFiDirectActivity.SENDER_TAG, "File to be sent has been set to data Model");
-
 
                 InputStream is = null;
                 try {

@@ -350,6 +350,10 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         config.deviceAddress = wifiP2pDevice.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
 
+        // sets device that clicks connect button first as SENDER
+        config.groupOwnerIntent = 0;
+
+
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
