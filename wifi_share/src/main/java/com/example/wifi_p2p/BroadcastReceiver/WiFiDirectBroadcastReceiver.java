@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 
+import com.example.wifi_p2p.R;
 import com.example.wifi_p2p.WiFiDirectActivity;
 
 public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
@@ -37,23 +38,16 @@ public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                 // Wifi P2P is enabled
-                Toast.makeText(activity, "Wifi is ON", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, R.string.wifi_on, Toast.LENGTH_SHORT).show();
             } else {
                 // Wi-Fi P2P is not enabled
-                Toast.makeText(activity, "Wifi is OFF", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, R.string.wifi_off, Toast.LENGTH_SHORT).show();
 
             }
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             // Call WifiP2pManager.requestPeers() to get a list of current peers
             if (manager != null) {
                 if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
                     return;
                 }
                 manager.requestPeers(channel, new WifiP2pManager.PeerListListener() {

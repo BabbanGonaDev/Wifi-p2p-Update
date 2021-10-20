@@ -42,9 +42,9 @@ public class WifiPeerListAdapter extends RecyclerView.Adapter<WifiPeerListAdapte
         holder.tv_nameResponse.setText(device.deviceName);
         holder.tv_statusResponse.setText(getDeviceStatus(device.status));
 
-        if(holder.tv_statusResponse.getText().toString().equalsIgnoreCase("Available")){
+        if(holder.tv_statusResponse.getText().toString().equalsIgnoreCase(context.getString(R.string.available))){
             holder.btnConnect.setText("Connect");
-        }else if(holder.tv_statusResponse.getText().toString().equalsIgnoreCase("Connected")){
+        }else if(holder.tv_statusResponse.getText().toString().equalsIgnoreCase(context.getString(R.string.connected))){
             holder.btnConnect.setText("Disconnect");
         }
     }
@@ -66,10 +66,10 @@ public class WifiPeerListAdapter extends RecyclerView.Adapter<WifiPeerListAdapte
             btnConnect = itemView.findViewById(R.id.btnConnect);
 
             btnConnect.setOnClickListener(view -> {
-                if(tv_statusResponse.getText().toString().equalsIgnoreCase("Available")){
+                if(tv_statusResponse.getText().toString().equalsIgnoreCase(context.getString(R.string.available))){
                     adapterClickListener.configConnect(peers.get(getLayoutPosition()));
                 }
-                else if(tv_statusResponse.getText().toString().equalsIgnoreCase("Connected")){
+                else if(tv_statusResponse.getText().toString().equalsIgnoreCase(context.getString(R.string.connected))){
                     adapterClickListener.configDisconnect(peers.get(getLayoutPosition()));
                 }
 
@@ -86,17 +86,17 @@ public class WifiPeerListAdapter extends RecyclerView.Adapter<WifiPeerListAdapte
 
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
-                return "Available";
+                return context.getString(R.string.available);
             case WifiP2pDevice.INVITED:
-                return "Invited";
+                return context.getString(R.string.invited);
             case WifiP2pDevice.CONNECTED:
-                return "Connected";
+                return context.getString(R.string.connected);
             case WifiP2pDevice.FAILED:
-                return "Failed";
+                return context.getString(R.string.failed);
             case WifiP2pDevice.UNAVAILABLE:
-                return "Unavailable";
+                return context.getString(R.string.unavailable);
             default:
-                return "Unknown";
+                return context.getString(R.string.unknown);
         }
     }
 }

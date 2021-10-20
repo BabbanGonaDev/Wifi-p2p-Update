@@ -13,7 +13,7 @@ import java.util.List;
 
 public class ViewModel extends AndroidViewModel {
     private DataRepository dataRepository;
-    private LiveData<List<Data>> allDatas;
+    private List<Data> allDatas;
 
     public ViewModel(@NonNull Application application) {
         super(application);
@@ -35,7 +35,7 @@ public class ViewModel extends AndroidViewModel {
     public void deleteAllDatas(){
         dataRepository.deleteAllDatas();
     }
-    public LiveData<List<Data>> getAllDatas(){
+    public List<Data> getAllDatas(){
         return allDatas;
     }
 }

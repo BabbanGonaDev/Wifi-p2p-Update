@@ -82,12 +82,9 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private LocationManager lm;
     public static boolean gps_enabled = false;
     private List<WifiP2pDevice> peers;
-    private static final String MESSAGE_TAG = "com.example.wifi_p2p";
     private AlertDialog.Builder myAlertBuilder;
 
-    private static WiFiDirectActivity activity;
-    private Context context;
-    private SharedPrefs sharedPrefs;
+
 
 
 
@@ -121,7 +118,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private void requestPermission() {
 
         if (ActivityCompat.shouldShowRequestPermissionRationale(WiFiDirectActivity.this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-            Toast.makeText(WiFiDirectActivity.this, "Write External Storage permission allows us to do store images. Please allow this permission in App Settings.", Toast.LENGTH_LONG).show();
+            Toast.makeText(WiFiDirectActivity.this, getString(R.string.external_storage_permission), Toast.LENGTH_LONG).show();
         } else {
             ActivityCompat.requestPermissions(WiFiDirectActivity.this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
         }
@@ -166,9 +163,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         channel = manager.initialize(this, getMainLooper(), null);
         receiver = new WiFiDirectBroadcastReceiver(manager, channel, this);
         mProgressDialog = new ProgressDialog(this, ProgressDialog.THEME_HOLO_LIGHT);
-        sharedPrefs = new SharedPrefs(getApplicationContext());
         peers = new ArrayList<>();
-        context = WiFiDirectActivity.this;
 
 
         // Initializing views
@@ -178,7 +173,6 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         recyclerView = findViewById(R.id.TestAppRecyclerView);
         loadingLayout = findViewById(R.id.loadingLayout);
         pulsator = findViewById(R.id.pulsator);
-        activity = new WiFiDirectActivity();
 
 
         mAdapter = new WifiPeerListAdapter(this, peers, new WifiPeerListAdapter.AdapterClickListener() {
@@ -192,7 +186,9 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
             @Override
             public void configDisconnect(WifiP2pDevice wifiP2pDevice) {
-                alertBuilder(wifiP2pDevice);
+                disconnect(wifiP2pDevice);
+                finish();
+//                alertBuilder(wifiP2pDevice);
             }
         });
         Log.d(TAG, "onCreate: " + mAdapter);
@@ -226,18 +222,16 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             @Override
             public void onClick(View v) {
 
-                //TODO: Check if wifi and GPS are enabled, else display a dialog prompting the user to put them on
-
                 try {
                     gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
                 } catch (Exception ex) {
                 }
                 if (!wifiManager.isWifiEnabled() && !gps_enabled) {
-                    Toast.makeText(WiFiDirectActivity.this, "Turn On Wi-Fi and Location", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(WiFiDirectActivity.this, getString(R.string.wifi_and_location__is_off), Toast.LENGTH_SHORT).show();
                 } else if (!gps_enabled) {
-                    Toast.makeText(WiFiDirectActivity.this, "Turn On Location", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(WiFiDirectActivity.this, getString(R.string.location__is_off), Toast.LENGTH_SHORT).show();
                 } else if (!wifiManager.isWifiEnabled()) {
-                    Toast.makeText(WiFiDirectActivity.this, "Turn On Wi-fi", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(WiFiDirectActivity.this, getString(R.string.wifi_is_off), Toast.LENGTH_SHORT).show();
                 } else {
                     loadingLayout.setVisibility(View.VISIBLE);
                     pulsator.start();
@@ -269,15 +263,15 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
     private void alertBuilder(WifiP2pDevice wifiP2pDevice) {
         myAlertBuilder = new AlertDialog.Builder(WiFiDirectActivity.this);
-        myAlertBuilder.setTitle("BG WIFI DIRECT");
-        myAlertBuilder.setMessage("Do another transfer");
-        myAlertBuilder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+        myAlertBuilder.setTitle(getString(R.string.alert_builder_title));
+        myAlertBuilder.setMessage(getString(R.string.alert_builder_message));
+        myAlertBuilder.setPositiveButton(getString(R.string.yes), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 return;
             }
         });
-        myAlertBuilder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+        myAlertBuilder.setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 disconnect(wifiP2pDevice);
@@ -332,12 +326,12 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                Toast.makeText(WiFiDirectActivity.this, "Discovery Initiated", Toast.LENGTH_SHORT).show();
+                Toast.makeText(WiFiDirectActivity.this, getString(R.string.discovery_initiated), Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onFailure(int reason) {
-                Toast.makeText(WiFiDirectActivity.this, "Discovery Failed" + reason, Toast.LENGTH_SHORT).show();
+                Toast.makeText(WiFiDirectActivity.this, getString(R.string.discovery_failed) + reason, Toast.LENGTH_SHORT).show();
 
             }
         });
@@ -349,10 +343,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         WifiP2pConfig config = new WifiP2pConfig();
         config.deviceAddress = wifiP2pDevice.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
-
-        // sets device that clicks connect button first as SENDER
         config.groupOwnerIntent = 0;
-
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -365,7 +356,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
             @Override
             public void onFailure(int reason) {
-                Toast.makeText(WiFiDirectActivity.this, "Connection failed. Retry.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(WiFiDirectActivity.this, getString(R.string.connection_failed), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -381,7 +372,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
             @Override
             public void onFailure(int reason) {
-                Log.d(TAG, "Disconnect failed. Reason :" + reason);
+                Log.d(TAG, getString(R.string.disconnection_failed) + reason);
             }
         });
     }
@@ -414,7 +405,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
         if (info.groupFormed && info.isGroupOwner) {
             //The receiver block
-            Toast.makeText(WiFiDirectActivity.this, "This device can only receive files", Toast.LENGTH_LONG).show();
+            Toast.makeText(WiFiDirectActivity.this, getString(R.string.receiver_info), Toast.LENGTH_LONG).show();
             // Perform Async Task
             FileServerAsyncTask asyncTask = (FileServerAsyncTask) new FileServerAsyncTask(WiFiDirectActivity.this, new FileServerAsyncTask.AsyncResponse() {
 
@@ -546,7 +537,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
         peers.clear();
         peers.addAll(peersList.getDeviceList());
-        Toast.makeText(WiFiDirectActivity.this, "Updating Devices", Toast.LENGTH_SHORT).show();
+        Toast.makeText(WiFiDirectActivity.this, getString(R.string.updating_devices), Toast.LENGTH_SHORT).show();
         recyclerView.setVisibility(View.VISIBLE);
         loadingLayout.setVisibility(View.GONE);
         if (peers.size() == 0) {
@@ -554,7 +545,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
         mAdapter.notifyDataSetChanged();
         if (peers.size() == 0) {
-            Toast.makeText(WiFiDirectActivity.this, "No devices found", Toast.LENGTH_SHORT).show();
+            Toast.makeText(WiFiDirectActivity.this, getString(R.string.no_device_found), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -582,7 +573,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     if (actualFileLength > 0) {
                         progressPercentage = (int) ((total * 100) / actualFileLength);
                     }
-                    showProgressBar("Receiving File....");
+                    showProgressBar("Receiving file....");
                     mProgressDialog.setProgress(progressPercentage);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -610,7 +601,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
     }
 
-    public static void copyFileToSend(InputStream inputStream, OutputStream out, Long actualFileLength) {
+    public void copyFileToSend(InputStream inputStream, OutputStream out, Long actualFileLength) {
         Log.d(SENDER_TAG, "Inside copyFileToSend function");
 
         byte buf[] = new byte[1024];
@@ -639,6 +630,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
                     if (mProgressDialog != null) {
                         if (mProgressDialog.isShowing()) {
                             mProgressDialog.dismiss();
+
                         }
                     }
                 }
@@ -648,17 +640,18 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
             if (mProgressDialog != null) {
                 if (mProgressDialog.isShowing()) {
                     mProgressDialog.dismiss();
+
                 }
             }
-
             out.close();
             inputStream.close();
+            finish();
             Log.d(SENDER_TAG, "Sending should be done here, closing out all streams");
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-        
+
     }
 
 }

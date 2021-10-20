@@ -30,6 +30,7 @@ public class FileTransferService extends IntentService {
     public static final String Extension = "extension";
     public static final String FileLength = "fileLength";
     public static final String TYPE = "type";
+    WiFiDirectActivity activity = new WiFiDirectActivity();
 
 
 
@@ -45,7 +46,6 @@ public class FileTransferService extends IntentService {
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
         Context context = getApplicationContext();
-        Log.d(WiFiDirectActivity.SENDER_TAG, "Handling the intent in the service");
         if (intent.getAction().equals(ACTION_SEND_FILE)) {
             String fileUri = intent.getExtras().getString(EXTRAS_FILE_PATH);
             String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
@@ -76,7 +76,7 @@ public class FileTransferService extends IntentService {
                 } catch (FileNotFoundException e) {
                     Log.d(WiFiDirectActivity.SENDER_TAG, e.toString());
                 }
-                WiFiDirectActivity.copyFileToSend(is, stream, file_length);
+                activity.copyFileToSend(is, stream, file_length);
                 Log.d(WiFiDirectActivity.SENDER_TAG, "Client: Data has been sent");
             } catch (IOException e) {
                 Log.e(WiFiDirectActivity.SENDER_TAG, e.getMessage());
@@ -93,7 +93,9 @@ public class FileTransferService extends IntentService {
                         }
                     }
 
+
                 }
+
             }
         }
     }

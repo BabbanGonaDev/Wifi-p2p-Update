@@ -1,3 +1,29 @@
 <resources>
     <string name="app_name">Wifi-p2p</string>
+    <string name="available">Available</string>
+    <string name="connected">Connected</string>
+    <string name="invited">Invited</string>
+    <string name="failed">Failed</string>
+    <string name="unavailable">Unavailable</string>
+    <string name="unknown">Unknown</string>
+    <string name="file_received">File Received</string>
+    <string name="wifi_on">Wifi is ON</string>
+    <string name="wifi_off">Wifi is OFF</string>
+    <string name="external_storage_permission">Write External Storage permission allows us to do store images. Please allow this permission in App Settings.</string>
+    <string name="wifi_and_location__is_off">Turn On Wi-Fi and Location</string>
+    <string name="location__is_off">Turn On Location</string>
+    <string name="wifi_is_off">Turn On Wi-fi</string>
+    <string name="alert_builder_title">BG WIFI DIRECT</string>
+    <string name="alert_builder_message">Do another transfer</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="discovery_initiated">Discovery Initiated</string>
+    <string name="discovery_failed">Discovery Failed</string>
+    <string name="connection_failed">Connection failed. Retry.</string>
+    <string name="disconnection_failed">Disconnect failed. Reason :</string>
+    <string name="receiver">RECEIVER</string>
+    <string name="sender">SENDER</string>
+    <string name="receiver_info">This device can only receive files</string>
+    <string name="updating_devices">Updating Devices</string>
+    <string name="no_device_found">No devices found</string>
 </resources>

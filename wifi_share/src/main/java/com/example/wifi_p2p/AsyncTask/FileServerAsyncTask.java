@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import com.example.wifi_p2p.Data.SharedPrefs;
 import com.example.wifi_p2p.Model.DataModel;
+import com.example.wifi_p2p.R;
 import com.example.wifi_p2p.SharedFilesListActivity;
 import com.example.wifi_p2p.WiFiDirectActivity;
 
@@ -26,8 +27,8 @@ import static com.example.wifi_p2p.WiFiDirectActivity.RECEIVER_TAG;
 public class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
     private Context context;
     WiFiDirectActivity activity = new WiFiDirectActivity();
-    public AsyncResponse delegate = null;
-    SharedPrefs sharedPrefs;
+    public AsyncResponse delegate;
+
 
     public FileServerAsyncTask(Context context, AsyncResponse delegate) {
         this.context = context;
@@ -41,12 +42,10 @@ public class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
 
     @Override
     protected void onPreExecute() {
-        Log.d(RECEIVER_TAG, "----> " + "onPreExecute for the FileServerAsyncTask A.K.A the receiver");
     }
 
     @Override
     protected String doInBackground(Void... voids) {
-        Log.d(RECEIVER_TAG, "Receiving file started");
         try {
             ServerSocket serverSocket = new ServerSocket(8988);
             Log.d(RECEIVER_TAG, "Server: Socket opened");
@@ -56,31 +55,19 @@ public class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
             ObjectInputStream ois = new ObjectInputStream(inputstream);
             DataModel dataModel;
             dataModel = (DataModel) ois.readObject();
-            Log.d(RECEIVER_TAG, "DataModel has been gotten from readObject");
-
 
             String storage_state = Environment.getExternalStorageState();
             if (storage_state.equals(Environment.MEDIA_MOUNTED)) {
                 String fileName = dataModel.getFileName();
                 Long actualFileLength = dataModel.getFileLength();
-                Log.d(RECEIVER_TAG, "File Name: " + fileName + "\n File Length: " + actualFileLength);
-
-                Log.d(RECEIVER_TAG, "Creating BG folder in internal storage");
 
                 final File f = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + "/BabbanGona"),
                         fileName);
-
-
                 File dirs = new File(f.getParent());
                 if (!dirs.exists())
                     Log.d(RECEIVER_TAG, "Directory doesn't exist so we are creating the folder");
                 dirs.mkdirs();
                 f.createNewFile();
-
-                Log.d(RECEIVER_TAG, "Folder created in internal storage");
-
-
-                Log.d(RECEIVER_TAG, "receiver: copying received files " + f.toString());
 
                activity.copyReceivedFile(inputstream, new FileOutputStream(f), actualFileLength);
                 ois.close();
@@ -100,7 +87,7 @@ public class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
     @Override
     protected void onPostExecute(String result) {
         if (result != null) {
-            Toast.makeText(context.getApplicationContext(), "File Received", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context.getApplicationContext(), R.string.file_received, Toast.LENGTH_SHORT).show();
             delegate.processFinish(result);
 
         }

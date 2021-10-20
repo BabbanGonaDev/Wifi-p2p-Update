@@ -13,12 +13,12 @@ import java.util.List;
 
 public class DataRepository {
     private DataDao dataDao;
-    private LiveData<List<Data>> allDatas;
+    private List<Data> allDatas;
 
     public DataRepository(Application application) {
         SampleDatabase database = SampleDatabase.getInstance(application);
         dataDao = database.dataDao();
-        allDatas = dataDao.getAllDatas();
+        allDatas = dataDao.getData();
     }
 
     public void insert(Data data){
@@ -37,7 +37,7 @@ public class DataRepository {
         new DeleteAllDatasAsyncTask(dataDao).execute();
     }
 
-    public LiveData<List<Data>> getAllDatas() {
+    public List<Data> getAllDatas() {
         return allDatas;
     }
 

@@ -29,4 +29,7 @@ public interface DataDao {
 
     @Query("SELECT * from sample_table ORDER BY id ASC")
     LiveData<List<Data>> getAllDatas();
+
+    @Query("SELECT * from sample_table ORDER BY id ASC")
+    List<Data> getData();
 }
